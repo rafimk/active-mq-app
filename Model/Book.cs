@@ -1,3 +1,5 @@
+using System;
+
 namespace active_mq_app.Model;
 
 public class Book

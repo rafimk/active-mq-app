@@ -1,14 +1,18 @@
+using System;
+using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using ActiveMQ.Artemis.Client;
 using active_mq_app.Model;
 using active_mq_app.Amq;
+using active_mq_app.Commands;
+using System.Threading.Tasks;
+using active_mq_app.Contracts;
 
 namespace active_mq_app.Controllers;
 
-[ApiController]
-[Route("[controller]")]
-public class BooksController : ControllerBase
-{
+ [ApiController]
+ [Route("[controller]")]
+ public class BooksController : ControllerBase
+ {
     private readonly MessageProducer _messageProducer;
 
     public BooksController(MessageProducer messageProducer)
@@ -27,8 +31,6 @@ public class BooksController : ControllerBase
             Cost = command.Cost,
             InventoryAmount = command.InventoryAmount,
         };
-        await _context.Books.AddAsync(newBook);
-        await _context.SaveChangesAsync();
         
         var @event = new BookCreated
         {
@@ -48,20 +50,14 @@ public class BooksController : ControllerBase
     [HttpPut("{id}")]
     public async Task<IActionResult> Put(Guid id, [FromBody] UpdateBook command)
     {
-        var book = await _context.Books.FindAsync(id);
-        if (book == null)
-        {
-            return NotFound();
-        }
+        var book = new Book();
 
         book.Title = command.Title;
         book.Author = command.Author;
         book.Cost = command.Cost;
         book.InventoryAmount = command.InventoryAmount;
 
-        _context.Books.Update(book);
-        await _context.SaveChangesAsync();
-
+     
         var @event = new BookUpdated
         {
             Id = book.Id,
@@ -72,6 +68,7 @@ public class BooksController : ControllerBase
             UserId = command.UserId,
             Timestamp = DateTime.UtcNow
         };
+        
         await _messageProducer.PublishAsync(@event);
 
         return Ok();
